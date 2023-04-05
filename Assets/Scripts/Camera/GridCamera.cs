@@ -25,6 +25,7 @@ public class GridCamera : MonoBehaviour
     void Start()
     {
         state = PlayerState.IDLE;
+        World.Instance.CheckCollision(transform.position, transform.position);
     }
 
     void StartRotateBy(float angle)
@@ -36,32 +37,38 @@ public class GridCamera : MonoBehaviour
 
     void HandleMovingControl()
     {
-        if (Input.GetKeyDown(Settings.keyMapping.GO_FORWARD))
+        if (state == PlayerState.IDLE && Input.GetKey(GameSettings.Instance.keyMapping.GO_FORWARD))
         {
             state = PlayerState.MOVE;
-            StartMoveBy(Settings.gridSize);
+            StartMoveBy(GameSettings.Instance.worldVariables.gridSize);
+            CheckCollision();
         }
-        else if (Input.GetKeyDown(Settings.keyMapping.TURN_LEFT))
+        if (state == PlayerState.IDLE && Input.GetKey(GameSettings.Instance.keyMapping.TURN_LEFT))
         {
             state = PlayerState.ROTATE;
             StartRotateBy(-90);
         }
-        else if (Input.GetKeyDown(Settings.keyMapping.TURN_RIGHT))
+        if (state == PlayerState.IDLE && Input.GetKey(GameSettings.Instance.keyMapping.TURN_RIGHT))
         {
             state = PlayerState.ROTATE;
             StartRotateBy(90);
         }
-        else if (Input.GetKeyDown(Settings.keyMapping.TURN_AROUND))
+        if (state == PlayerState.IDLE && Input.GetKey(GameSettings.Instance.keyMapping.TURN_AROUND))
         {
             state = PlayerState.TURN_AROUND;
             StartRotateBy(180);
         }
     }
 
+    Vector3 RoundToInt(Vector3 position)
+    {
+        return new Vector3(Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.y), Mathf.RoundToInt(position.z));
+    }
+
     private void StartMoveBy(float gridSize)
     {
-        startMovePosition = transform.position;
-        endMovePosition = startMovePosition + transform.rotation * Vector3.forward * gridSize;
+        startMovePosition = RoundToInt(transform.position);
+        endMovePosition = RoundToInt(startMovePosition + transform.rotation * Vector3.forward * gridSize);
         time = 0;
     }
 
@@ -77,9 +84,18 @@ public class GridCamera : MonoBehaviour
         {
             HandleMovingControl();
         }
-        if (state == PlayerState.FIGHT_IDLE)
+        else if (state == PlayerState.FIGHT_IDLE)
         {
             HandleFightControl();
+        }
+    }
+
+    private void CheckCollision()
+    {
+        if (World.Instance.CheckCollision(endMovePosition, startMovePosition))
+        {
+            endMovePosition = startMovePosition;
+            state = PlayerState.IDLE;
         }
     }
 
@@ -99,7 +115,7 @@ public class GridCamera : MonoBehaviour
 
     private void HandleMove()
     {
-        float speed = Settings.controlVariables.moveSpeed;
+        float speed = GameSettings.Instance.controlVariables.moveSpeed;
         transform.position = Vector3.Lerp(startMovePosition, endMovePosition, time * speed);
 
         if (time * speed >= 1.0f)
@@ -112,7 +128,7 @@ public class GridCamera : MonoBehaviour
 
     private void HandleRotate()
     {
-        float speed = state == PlayerState.ROTATE ? Settings.controlVariables.rotateSpeed : Settings.controlVariables.turnAroundSpeed;
+        float speed = state == PlayerState.ROTATE ? GameSettings.Instance.controlVariables.rotateSpeed : GameSettings.Instance.controlVariables.turnAroundSpeed;
 
         transform.rotation = Quaternion.Lerp(startRotate, endRotate, time * speed);
 
